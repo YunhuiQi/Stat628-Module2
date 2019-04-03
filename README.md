@@ -2,7 +2,7 @@
 
 ## Introduction
 The repository includes a code folder, data folder and image folder.<br>
-The code folder contains 
+The code folder contains the file generating data sets attributes_split.ipynb.
 
 
 
