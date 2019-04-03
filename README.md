@@ -1,7 +1,7 @@
 # Stat628-Module2-Thursday(7)
 
 ## Introduction
-The repository includes a code folder, data folder and image folder.
+The repository includes a code folder, data folder and image folder.<br>
 The code folder contains 
 
 
