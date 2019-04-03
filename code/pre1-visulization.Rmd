@@ -1,0 +1,200 @@
+---
+title: "Untitled"
+author: "Qiming Hao"
+date: "2019/3/3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+words <- read.csv('../data/review_train.csv')
+str(words)
+```
+
+```{r}
+##Calculate average ratings for each gym
+library(dplyr)
+ratings <- words %>%
+  group_by(business_id) %>%
+  dplyr::summarize(Mean = mean(stars, na.rm=TRUE))
+num <- words %>%
+  group_by(business_id) %>%
+  dplyr::summarize(num = length(stars))
+```
+
+```{r}
+##Merge business data in order to calculate mean ratings
+attribute <- read.csv('../data/attr.csv')
+b <- read.csv('../data/bs_train_select.csv')
+attribute$business_id = b$business_id
+business <- merge(attribute,ratings,by="business_id",all = TRUE,sort = FALSE)
+business$Mean <- round(business$Mean,1)
+names(business)[names(business)=='Mean'] <- 'ratings'
+business <- merge(business,num,by="business_id",all = TRUE,sort = FALSE)
+business$business_id <- NULL
+```
+
+
+```{r}
+##Dist. of ratings (reviews, gyms)
+library(ggplot2)
+ggplot(business,aes(x=ratings,fill='red'))+geom_density(alpha=.3)+theme_classic()+theme(legend.position = 'none')+ggtitle('Distribution of Average Ratings')+theme(plot.title = element_text(hjust =0.5,size=20))+theme(axis.text=element_text(size=15),axis.title=element_text(size=15))
+
+c <- with(words,table(stars))
+barplot(c, legend = F,xlab = 'stars',ylab = 'Numbers',main = 'Distribution of Stars in Reviews',cex.main=1.6,cex.lab=1.2)
+```
+
+```{r}
+##Extract review time by day/season
+words$date <- as.character(words$date)
+words$time <- gsub(".* ([0-9]{2})\\:.*",words$date,replacement = "\\1")
+words$season <- gsub(".*-([0-9]{2})-.*",words$date,replacement = "\\1")
+```
+
+```{r}
+##Refer to http://www.r-graph-gallery.com/49-clock-plot/
+clock.plot <- function (x, col = rainbow(n), ...) {
+  if( min(x)<0 ) x <- x - min(x)
+  if( max(x)>1 ) x <- x/max(x)
+  n <- length(x)
+  if(is.null(names(x))) names(x) <- 0:(n-1)
+  m <- 1.05
+  plot(0, type = 'n', xlim = c(-m,m), ylim = c(-m,m), axes = F, xlab = '', ylab = '', ...)
+  a <- pi/2 - 2*pi/200*0:200
+  polygon( cos(a), sin(a) )
+  v <- .02
+  a <- pi/2 - 2*pi/n*0:n
+  segments( (1+v)*cos(a), (1+v)*sin(a), (1-v)*cos(a), (1-v)*sin(a) )
+  segments( cos(a), sin(a),0, 0, col = 'light grey', lty = 3) 
+  ca <- -2*pi/n*(0:50)/50
+  for (i in 1:n) {
+    a <- pi/2 - 2*pi/n*(i-1)
+    b <- pi/2 - 2*pi/n*i
+    polygon( c(0, x[i]*cos(a+ca), 0), c(0, x[i]*sin(a+ca), 0), col=col[i] )
+    v <- .1
+    text((1+v)*cos(a), (1+v)*sin(a), names(x)[i])
+  }
+}
+ 
+# Use the function on the created data
+clock.plot(table(words$time), main = "Number of reviews for each hour of the day")
+clock.plot(table(words$season), main = "Number of reviews for each month of the year")
+```
+
+
+```{r}
+##Process the attribute 'ByAppointmentOnly' into suitable levels
+levels(business$ByAppointmentOnly)[levels(business$ByAppointmentOnly) %in% c("","None")] <- "None"
+```
+
+
+
+```{r}
+###plot dist. of ratings wrt 'ByAppointmentOnly'
+ggplot(business, aes(ratings, colour=ByAppointmentOnly, fill=ByAppointmentOnly)) + geom_density(alpha=0.55)+theme_classic()+ggtitle("Dist. of ratings for ByAppointmentOnly")+theme(plot.title = element_text(hjust =0.5,size=20))+theme(axis.text=element_text(size=15),axis.title=element_text(size=15))
+```
+
+```{r}
+###plot dist. of ratings wrt 'GoodForKids'
+ggplot(business, aes(ratings, colour=GoodForKids, fill=GoodForKids)) + geom_density(alpha=0.55)+theme_classic()+ggtitle("Dist. of ratings for GoodForKids")+theme(plot.title = element_text(hjust =0.5,size=20))+theme(axis.text=element_text(size=15),axis.title=element_text(size=15))
+```
+
+
+```{r}
+##Plot gym business location in US map
+library(ggmap)
+
+register_google(key = "AIzaSyAO29CntevLbvtTDk26ZA2EcZQltecIKMU")
+map <- get_map(location='united states', zoom=4, maptype = "terrain",
+             color='color')
+ggmap(map) + geom_point(aes(x=longitude, y=latitude, colour=ratings),data=business, na.rm = T)  + scale_color_gradient(low="beige", high="blue")
+```
+
+```{r}
+##Obtain cleveland map
+cleve <- get_map(location = 'Cleveland', zoom = 9)
+```
+```{r}
+###plot the dist. of business in Cleveland
+ggmap(cleve) + geom_point(aes(x=longitude, y=latitude,  colour=ratings,size=num),data=business[which(business$state=='OH'),], na.rm = T)  + scale_color_gradient(low="beige", high="blue")
+```
+
+
+```{r}
+##words process written by Yunhui Qi
+words[,4]=as.character(words[,4])
+words_clean=list()
+for (i in 1:length(words[,4])) {
+  words[i,4]= gsub("\\[\\'","",words[i,4])
+  words[i,4]
+  words[i,4]= gsub("\\'\\, \\'"," ",words[i,4])
+  words[i,4]
+  words[i,4]= gsub("\\'\\]","",words[i,4])
+  words[i,4]
+  words[i,4]= gsub("\\\"","",words[i,4])
+  words[i,4]
+  words_clean[[i]]= unlist(strsplit(words[i,4], " "))
+}
+```
+
+```{r}
+##Function to calculate mean occurence of words among each stars
+plot.word <- function(x){
+  t <- NULL
+  for( i in 1:5){
+    l <- 0
+    for (m in which(words$stars==i)) {
+      l <- l+sum(words_clean[[m]]%in%x)
+    }
+    l <- l/sum(words$stars==i)
+    t <- c(t,l)
+  }
+  names(t) <- c(1:5)
+  barplot(t,xlab = 'ratings',main = x,ylab = 'Mean Occur. of Words')
+}
+plot.sum <- function(x){
+  for (i in x) {
+    plot.word(i)
+  }
+}
+```
+
+```{r}
+##Plot selected words distribution
+wordp1 <- c("coach","staff","service","trial","membership","group","environment","vibe")
+par(mfrow=c(2,4))
+plot.sum(wordp1)
+```
+
+
+
+```{r}
+##Plot the distribution of five parking types
+count.perc <- function(x){
+  t <- NULL
+  for (i in 1:5) {
+    l <- length(which(x$ratings<=i&x$ratings>(i-1)))
+    t <- c(t,l)
+  }
+  t <- t*100/sum(t,na.rm=T)
+}
+t1 <- count.perc(business[which(business$garage==TRUE),])
+t2 <- count.perc(business[which(business$lot==TRUE),])
+t3 <- count.perc(business[which(business$street==TRUE),])
+t4 <- count.perc(business[which(business$valet==TRUE),])
+t5 <- count.perc(business[which(business$validated==TRUE),])
+t.sum <- cbind(t1,t2,t3,t4,t5)
+colnames(t.sum) <- c("Garage","Lot","Street","Valet","Validated")
+rownames(t.sum) <- 1:5
+library(RColorBrewer)
+coul = brewer.pal(5, "Set3") 
+barplot(t.sum[,1:5], col=coul , border="white",xlab = "Parking Type",ylab = "Percentage",legend.text = rownames(t.sum),args.legend = list(x ='topright', bty='n', inset=c(-0.1,0)))
+```
+
+
+
+
+

@@ -1,0 +1,114 @@
+---
+title: "attributes"
+author: "Qiming Hao"
+date: "2019/3/25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+###Read review data and preprocess
+setwd('/Users/haoqiming/Dropbox/628 module2/data')
+words <- read.csv('review_train.csv')
+words[,4]=as.character(words[,4])
+words_clean=list()
+for (i in 1:length(words[,4])) {
+  words[i,4]= gsub("\\[\\'","",words[i,4])
+  words[i,4]
+  words[i,4]= gsub("\\'\\, \\'"," ",words[i,4])
+  words[i,4]
+  words[i,4]= gsub("\\'\\]","",words[i,4])
+  words[i,4]
+  words[i,4]= gsub("\\\"","",words[i,4])
+  words[i,4]
+  words_clean[[i]]= unlist(strsplit(words[i,4], " "))
+}
+```
+
+
+```{r}
+###Obtain weights for each review based on the number of topic words, and then calculate the weighted stars for each business. 
+weight <- NULL
+for (i in 1:length(words_clean)) {
+  weight[i] <- sum(words_clean[[i]]%in%c('equipment','machine','facility','weight','cardio','pool','studio','floor','wall','stuff','class','training','fun','group','session','yoga','schdule','program','service','everything','locker','customer','kid','shower','sauna','desk','change','child','girl','treatment','staff','bathroom','year','member','membership','money','contract','family','deal','rate','trainer','instructor','help','coach','time','day','month','morning','night','hour','door','anything','music','planet','house'))
+}
+words$weight <- weight+1
+rat <- words %>%
+  group_by(business_id) %>%
+  dplyr::summarize(w_stars=sum(weight*stars)/sum(weight))
+```
+
+
+```{r}
+###Read business data wrt attributes
+attribute <- read.csv('attr.csv')
+b <- read.csv('bs_train_select.csv')
+attribute$business_id = b$business_id
+###Merge business data with weighted stars by business id.
+attribute <- merge(attribute,rat,by="business_id",all = TRUE,sort = FALSE)
+attribute$business_id <- NULL
+```
+
+
+
+```{r}
+###Further process variables. Delete variables that are non-sense for the gym business. They might be all missing values under these attributes. Or they only have one level for the given attributes.
+attribute$Ambience <- NULL
+attribute$GoodForMeal <- NULL
+attribute$Music <- NULL
+attribute$BusinessAcceptsBitcoin <- NULL
+attribute$WiFi[which(attribute$WiFi=="u'free'")] <- "'free'"
+attribute$Smoking[which(attribute$Smoking=="u'no'")] <- "'no'"
+attribute$WiFi <- as.character(attribute$WiFi)
+attribute$WiFi <- as.factor(attribute$WiFi)
+attribute$Smoking <- as.character(attribute$Smoking)
+attribute$Smoking <- as.factor(attribute$Smoking)
+attribute$WheelchairAccessible <- NULL
+attribute$DogsAllowed[which(is.na(attribute$DogsAllowed)==TRUE)] <- FALSE
+for (i in 1:ncol(attribute)) {
+  attribute[which(attribute[,i]==""),i] <- NA
+}
+attribute$BusinessAcceptsCreditCards[attribute$BusinessAcceptsCreditCards=="None"] <- NA
+attribute$ByAppointmentOnly[attribute$ByAppointmentOnly=="None"] <- NA
+```
+
+
+```{r}
+###Categorize the weighted stars into 5 levels for classification decision tree.
+for (i in 1:nrow(attribute)) {
+  if(attribute$w_stars[i]<1.5){
+    attribute$w_stars[i] = 1
+  }else if(attribute$w_stars[i]>=1.5&attribute$w_stars[i]<2.5){
+    attribute$w_stars[i] = 2
+  }else if(attribute$w_stars[i]>=2.5&attribute$w_stars[i]<3.5){
+    attribute$w_stars[i] = 3
+  }else if(attribute$w_stars[i]>=3.5&attribute$w_stars[i]<4.5){
+    attribute$w_stars[i] = 4
+  }else if(attribute$w_stars[i]>=4.5){
+    attribute$w_stars[i] = 5
+  }
+}
+```
+
+```{r}
+###Write the processed data set. We'll use this data set later to run classification decision tree model in GUIDE.
+write.table(attribute,'attribute.txt',row.names = F)
+```
+
+```{r}
+###Plot the importance scores obtained by GUIDE after classification decision tree.
+choosedata<-read.table("importance.txt",header = T)
+plotdata<-choosedata[1:10,]
+par(mar=c(5.1, 25/1.8 ,4.1 ,2.1))
+barplot(plotdata$Score,names.arg = plotdata$Variable,col="cyan",horiz=T,xlab="importancescores",las=1)
+abline(v=4,col="red",lty=2)
+title(main="importance score plot")
+```
+
+
+
