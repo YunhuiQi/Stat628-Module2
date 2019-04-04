@@ -1,0 +1,88 @@
+---
+title: "Goal1_Linear regression"
+author: "Yunhui Qi"
+date: "2019/4/3"
+output: html_document
+---
+
+ This file is the second part of Goal 1.
+ 
+ This should be run after Goal1_Get business scores.ipynb. 
+ 
+ This file is to get coefficients of seven meaningful topics and 
+ give quantative suggestions on how to improve ratings wrt review. 
+
+ Note: please notice that we did not write details of this part in our summary, this is because we are not looking for a best model, we just want to provide some quantative description on our analysis before. We explain the results of linear regression in this file.
+
+### Regression
+
+```{r}
+business_scores=read.csv("../data/business_scores.csv")
+predictors = business_scores[,2:8]
+weighted_star = business_scores$weighted_stars
+summary(lm(weighted_star~.,data = predictors))
+```
+
+From the results above, we have several conclusion:
+
+1. Coefficients: 
+
+  When all other topic scores are fixed, weighted ratings will increase 0.8225 if score of Facilities increases by 1. 
+  
+  When all other topic scores are fixed, weighted ratings will increase 1.0843 if score of Courses increases by 1. 
+  
+  When all other topic scores are fixed, weighted ratings will increase 0.7164 if score of Service_and_Accessories increases by 1. 
+  
+  When all other topic scores are fixed, weighted ratings will increase 1.1960 if score of Membership_and_Price increases by 1. 
+  
+  When all other topic scores are fixed, weighted ratings will increase 0.6984 if score of Trainer increases by 1. 
+  
+  When all other topic scores are fixed, weighted ratings will increase 0.8813 if score of Time increases by 1.
+  
+  When all other topic scores are fixed, weighted ratings will increase 0.6448 if score of Environment increases by 1.
+  
+2. Confidence interval for coefficients:
+
+We are 95% confident that our intervals contain the corresponding true coefficients' values.
+
+3. Hypothesis testing for t tests:
+
+For each coefficient $ \beta_{i} $, we have t test: $H_0: \beta_1 = 0$ vs $H_1: \beta_1 \neq 0$. The associated p-value for coefficients ar all less than 0.05.  We can declare that there is a linear relationship between topic score and weighted ratings. However, our conclusion carries a 5% error rate where we may have falsely declared that there is a relationship even though there truly isn't a relationship.
+
+4. Hypothesis testing for F test: 
+
+Using p value from F test which is less than 2.2*10^-16, we can conclude that our model is effective with 5% error rate.
+
+5. $ R^2 $:
+
+Abdomen and weight only explain about 12.96% of the variation in body fat %. Besides, compared with the full model which has adjusted $ R^2 $ equal to 12.63%, our model may not be appropriate
+
+### Diagnostic
+
+```{r}
+layout(matrix(c(1,2,3,4),nrow=2))
+plot(lm(weighted_star~.,data = predictors))
+```
+
+
+There are several important assumptions about linear regression. From diagnostic plots, we conclude:
+
+1. Linearity: 
+
+from the plot of fitted values versus residuals,linearity assumption may be violated.
+
+2. Additivity:
+
+seems reasonable from the interpretation of coefficients
+
+3. Normally distributed errors: 
+
+seems not that reasonable from the QQ plot.
+
+4. Constant variance: 
+
+the error terms do not have equal variance.
+
+5. Outliers: 
+
+from cook's distance, we do not have outliers.
